@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:robot/pages/job_page.dart';
 import 'package:robot/pages/about_us_page.dart';
 import 'package:robot/pages/agenda_page.dart';
 import 'package:robot/pages/guideline_page.dart';
 import 'package:robot/pages/home_page.dart';
 import 'package:robot/pages/landing_page.dart';
 import 'package:robot/pages/pay_page.dart';
+import 'package:robot/pages/predict_page.dart';
 import 'package:robot/pages/testing_page.dart';
 
 final GoRouter router = GoRouter(routes: [
@@ -49,6 +51,18 @@ final GoRouter router = GoRouter(routes: [
     path: '/testing',
     builder: (BuildContext context, GoRouterState state) {
       return const TestingPage();
+    },
+  ),
+  GoRoute(
+    path: '/job',
+    builder: (BuildContext context, GoRouterState state) {
+      return const JobPage();
+    },
+  ),
+  GoRoute(
+    path: '/predict',
+    builder: (BuildContext context, GoRouterState state) {
+      return const PredictPage();
     },
   ),
 ]);

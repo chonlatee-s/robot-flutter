@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:robot/store/app_store.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class GuidelinePage extends StatefulWidget {
-  const GuidelinePage({super.key});
+class JobPage extends StatefulWidget {
+  const JobPage({super.key});
 
   @override
-  State<GuidelinePage> createState() => _GuidelinePageState();
+  State<JobPage> createState() => _JobPageState();
 }
 
-class _GuidelinePageState extends State<GuidelinePage> {
+class _JobPageState extends State<JobPage> {
   @override
   void initState() {
     super.initState();
-    getGuideline();
+    getJobs();
   }
 
   @override
@@ -21,7 +21,7 @@ class _GuidelinePageState extends State<GuidelinePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'แนวข้อสอบ',
+          'หางาน',
           style: TextStyle(
             fontFamily: 'Kanit',
             fontSize: 24,
@@ -33,26 +33,27 @@ class _GuidelinePageState extends State<GuidelinePage> {
       body: Padding(
         padding: const EdgeInsets.only(top: 10, left: 5, bottom: 10),
         child: ListenableBuilder(
-            listenable: guidelinesChanged,
+            listenable: jobsChanged,
             builder: (context, child) {
               return ListView.builder(
-                itemCount: guidelines.length,
+                itemCount: jobs.length,
                 itemBuilder: (BuildContext context, int index) {
                   return ListTile(
                     leading: const Icon(
                       Icons.arrow_right,
                     ),
-                    title: Text('${guidelines[index]['topic']}',
+                    title: Text('${jobs[index]['topic']}',
                         style: const TextStyle(
                           fontFamily: 'Kanit',
                           fontSize: 12,
                           fontWeight: FontWeight.w300,
                           color: Color.fromRGBO(41, 41, 41, 1),
                         )),
+                    subtitle: convertDateTH(jobs[index]['date_end']),
                     trailing: IconButton(
                       onPressed: () {
                         launchUrl(
-                          Uri.parse('${guidelines[index]['link']}'),
+                          Uri.parse('${jobs[index]['link']}'),
                         );
                       },
                       icon: const Icon(
@@ -64,6 +65,19 @@ class _GuidelinePageState extends State<GuidelinePage> {
                 },
               );
             }),
+      ),
+    );
+  }
+
+  Widget convertDateTH(dateTime) {
+    List<String> d = dateTime.split("-"); // แยกสตริงโดยใช้เครื่องหมาย ','
+    return Text(
+      'รับสมัครถึง ${d[2]}-${d[1]}-${int.parse(d[0]) + 543}',
+      style: const TextStyle(
+        fontFamily: 'Kanit',
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: Color.fromRGBO(177, 87, 49, 1),
       ),
     );
   }

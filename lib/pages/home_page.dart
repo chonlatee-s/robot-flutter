@@ -165,7 +165,7 @@ class HomePage extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 20),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 InkWell(
                                   onTap: () {
@@ -180,6 +180,29 @@ class HomePage extends StatelessWidget {
                                       ),
                                       Text(
                                         'ฝึกทำข้อสอบ',
+                                        style: TextStyle(
+                                          fontFamily: 'Kanit',
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w300,
+                                          color: Color.fromRGBO(41, 41, 41, 1),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    context.push('/predict');
+                                  },
+                                  child: const Column(
+                                    children: [
+                                      Icon(
+                                        Icons.favorite,
+                                        color: Color.fromRGBO(187, 190, 170, 1),
+                                        size: 35,
+                                      ),
+                                      Text(
+                                        'เสี่ยงเซียมซี',
                                         style: TextStyle(
                                           fontFamily: 'Kanit',
                                           fontSize: 12,
@@ -236,20 +259,27 @@ class HomePage extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                InkWell(
-                                  onTap: () => launchUrl(
-                                    Uri.parse(
-                                        'https://www.youtube.com/@user-um9cq5or4v/playlists'),
-                                  ),
-                                  child: const Column(
+                              ],
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  context.push('/job');
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.only(top: 1),
+                                  child: Column(
                                     children: [
                                       Icon(
-                                        Icons.rocket_launch,
+                                        Icons.content_paste_search,
                                         color: Color.fromRGBO(187, 190, 170, 1),
                                         size: 35,
                                       ),
                                       Text(
-                                        'เรียนออนไลน์',
+                                        'หางาน',
                                         style: TextStyle(
                                           fontFamily: 'Kanit',
                                           fontSize: 12,
@@ -260,12 +290,31 @@ class HomePage extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
+                              ),
+                              InkWell(
+                                onTap: () => launchUrl(
+                                  Uri.parse(
+                                      'https://www.youtube.com/@user-um9cq5or4v/playlists'),
+                                ),
+                                child: const Column(
+                                  children: [
+                                    Icon(
+                                      Icons.rocket_launch,
+                                      color: Color.fromRGBO(187, 190, 170, 1),
+                                      size: 35,
+                                    ),
+                                    Text(
+                                      'เรียนออนไลน์',
+                                      style: TextStyle(
+                                        fontFamily: 'Kanit',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w300,
+                                        color: Color.fromRGBO(41, 41, 41, 1),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               InkWell(
                                 onTap: () {
                                   context.push('/pay');

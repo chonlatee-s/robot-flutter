@@ -1,6 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:math';
+
+// getPredict
+var predictNumber = "";
+final predictNumberChanged = ChangeNotifier();
+var predictResult = "";
+final predictResultChanged = ChangeNotifier();
 
 // getGuideline
 var guidelines = [];
@@ -14,9 +21,30 @@ final testingsChanged = ChangeNotifier();
 var word = "";
 final wordChanged = ChangeNotifier();
 
-//getWord
+//getNews
 var news = [];
 final newsChanged = ChangeNotifier();
+
+//getJobs
+var jobs = [];
+final jobsChanged = ChangeNotifier();
+
+// เซียมซี
+void getPredict() async {
+  Random random = Random();
+  int randomNumber = random.nextInt(28) + 1;
+
+  final result = await http.get(
+    Uri.parse(
+        'https://xn--42cm7czac0a7jb0li.com/getPredict.php?data=$randomNumber'),
+  );
+
+  final json = jsonDecode(result.body);
+  predictNumber = json['id'];
+  predictResult = json['result'];
+  predictNumberChanged.notifyListeners();
+  predictResultChanged.notifyListeners();
+}
 
 // แนวข้อสอบ
 void getGuideline() async {
@@ -77,4 +105,16 @@ void getNews() async {
   final json = jsonDecode(result.body);
   news.add(json);
   newsChanged.notifyListeners();
+}
+
+// jobs
+void getJobs() async {
+  final result = await http.get(
+    Uri.parse('https://xn--42cm7czac0a7jb0li.com/getJob.php'),
+  );
+
+  final json = jsonDecode(result.body);
+  jobs.clear();
+  jobs.addAll(json);
+  jobsChanged.notifyListeners();
 }
