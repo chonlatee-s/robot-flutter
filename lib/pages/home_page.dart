@@ -175,7 +175,7 @@ class HomePage extends StatelessWidget {
                                     children: [
                                       Icon(
                                         Icons.edit_note,
-                                        color: Color.fromRGBO(187, 190, 170, 1),
+                                        color: Color.fromRGBO(131, 150, 133, 1),
                                         size: 35,
                                       ),
                                       Text(
@@ -198,7 +198,7 @@ class HomePage extends StatelessWidget {
                                     children: [
                                       Icon(
                                         Icons.favorite,
-                                        color: Color.fromRGBO(187, 190, 170, 1),
+                                        color: Color.fromRGBO(131, 150, 133, 1),
                                         size: 35,
                                       ),
                                       Text(
@@ -221,7 +221,7 @@ class HomePage extends StatelessWidget {
                                     children: [
                                       Icon(
                                         Icons.category,
-                                        color: Color.fromRGBO(187, 190, 170, 1),
+                                        color: Color.fromRGBO(131, 150, 133, 1),
                                         size: 35,
                                       ),
                                       Text(
@@ -244,7 +244,7 @@ class HomePage extends StatelessWidget {
                                     children: [
                                       Icon(
                                         Icons.article,
-                                        color: Color.fromRGBO(187, 190, 170, 1),
+                                        color: Color.fromRGBO(131, 150, 133, 1),
                                         size: 35,
                                       ),
                                       Text(
@@ -275,7 +275,7 @@ class HomePage extends StatelessWidget {
                                     children: [
                                       Icon(
                                         Icons.content_paste_search,
-                                        color: Color.fromRGBO(187, 190, 170, 1),
+                                        color: Color.fromRGBO(131, 150, 133, 1),
                                         size: 35,
                                       ),
                                       Text(
@@ -300,7 +300,7 @@ class HomePage extends StatelessWidget {
                                   children: [
                                     Icon(
                                       Icons.rocket_launch,
-                                      color: Color.fromRGBO(187, 190, 170, 1),
+                                      color: Color.fromRGBO(131, 150, 133, 1),
                                       size: 35,
                                     ),
                                     Text(
@@ -325,7 +325,7 @@ class HomePage extends StatelessWidget {
                                     children: [
                                       Icon(
                                         Icons.coffee,
-                                        color: Color.fromRGBO(187, 190, 170, 1),
+                                        color: Color.fromRGBO(131, 150, 133, 1),
                                         size: 35,
                                       ),
                                       Text(
