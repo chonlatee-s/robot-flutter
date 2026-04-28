@@ -56,7 +56,6 @@ class _TestingPageState extends State<TestingPage> {
   }
 
   void _initData() {
-    // ถ้ามีข้อมูลอยู่แล้วให้เลิกโหลด ถ้าไม่มีให้รอฟังจาก Listeners
     if (testings.isNotEmpty) {
       setState(() => _isLoading = false);
     } else {
@@ -99,20 +98,32 @@ class _TestingPageState extends State<TestingPage> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: const Text('สรุปผลการสอบ', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)),
+        title: const Text('สรุปผลการสอบ',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('$score / $limit', style: TextStyle(fontFamily: 'Kanit', fontSize: 48, fontWeight: FontWeight.bold, color: primaryGreen)),
-            const Text('คะแนนที่ทำได้', style: TextStyle(fontFamily: 'Kanit', color: Colors.grey)),
+            Text('$score / $limit',
+                style: TextStyle(
+                    fontFamily: 'Kanit',
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: primaryGreen)),
+            const Text('คะแนนที่ทำได้',
+                style: TextStyle(fontFamily: 'Kanit', color: Colors.grey)),
           ],
         ),
         actions: [
           Center(
             child: ElevatedButton(
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(backgroundColor: darkNavy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-              child: const Text('ดูเฉลยละเอียด', style: TextStyle(color: Colors.white, fontFamily: 'Kanit')),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: darkNavy,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15))),
+              child: const Text('ดูเฉลยละเอียด',
+                  style: TextStyle(color: Colors.white, fontFamily: 'Kanit')),
             ),
           ),
         ],
@@ -125,7 +136,8 @@ class _TestingPageState extends State<TestingPage> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: primaryGreen,
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: const Center(
+            child: CircularProgressIndicator(color: Colors.white)),
       );
     }
     if (_isFinished) return _buildReviewView();
@@ -136,17 +148,27 @@ class _TestingPageState extends State<TestingPage> {
     return Scaffold(
       backgroundColor: bgLight,
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 20), onPressed: () => Navigator.pop(context)),
-        title: Text(currentUser != null ? 'โหมดแข่งขัน' : 'โหมดฝึกฝน', style: const TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold, fontSize: 18)),
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, size: 20),
+            onPressed: () => Navigator.pop(context)),
+        title: Text(currentUser != null ? 'โหมดแข่งขัน' : 'โหมดฝึกฝน',
+            style: const TextStyle(
+                fontFamily: 'Kanit',
+                fontWeight: FontWeight.bold,
+                fontSize: 18)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 15, top: 10, bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(color: darkNavy, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+                color: darkNavy, borderRadius: BorderRadius.circular(12)),
             child: Center(
               child: Text(
                 '${_remainingSeconds ~/ 60}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Kanit'),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Kanit'),
               ),
             ),
           )
@@ -168,8 +190,10 @@ class _TestingPageState extends State<TestingPage> {
                   ...(q['options'] as List).asMap().entries.map((entry) {
                     int idx = entry.key + 1;
                     String label = String.fromCharCode(64 + idx); // A, B, C, D
-                    bool isSelected = q['answer_user'].toString() == idx.toString();
-                    return _buildOption(idx, label, entry.value['option_text'], isSelected);
+                    bool isSelected =
+                        q['answer_user'].toString() == idx.toString();
+                    return _buildOption(
+                        idx, label, entry.value['option_text'], isSelected);
                   }).toList(),
                 ],
               ),
@@ -189,14 +213,27 @@ class _TestingPageState extends State<TestingPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('ความก้าวหน้า ${_currentIndex + 1}/${testings.length}', style: TextStyle(fontFamily: 'Kanit', fontSize: 12, color: Colors.grey[600])),
-              Text('${(progress * 100).toInt()}%', style: TextStyle(fontFamily: 'Kanit', fontSize: 12, color: primaryGreen, fontWeight: FontWeight.bold)),
+              Text('ความก้าวหน้า ${_currentIndex + 1}/${testings.length}',
+                  style: TextStyle(
+                      fontFamily: 'Kanit',
+                      fontSize: 12,
+                      color: Colors.grey[600])),
+              Text('${(progress * 100).toInt()}%',
+                  style: TextStyle(
+                      fontFamily: 'Kanit',
+                      fontSize: 12,
+                      color: primaryGreen,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(value: progress, minHeight: 8, backgroundColor: primaryGreen.withOpacity(0.1), color: primaryGreen),
+            child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: primaryGreen.withOpacity(0.1),
+                color: primaryGreen),
           ),
         ],
       ),
@@ -207,16 +244,31 @@ class _TestingPageState extends State<TestingPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.grey.shade100)),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.grey.shade100)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ข้อที่ ${_currentIndex + 1}', style: TextStyle(fontFamily: 'Kanit', color: accentOrange, fontWeight: FontWeight.bold)),
+          Text('ข้อที่ ${_currentIndex + 1}',
+              style: TextStyle(
+                  fontFamily: 'Kanit',
+                  color: accentOrange,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          Text(q['question'] ?? '', style: TextStyle(fontFamily: 'Kanit', fontSize: 18, fontWeight: FontWeight.bold, color: darkNavy, height: 1.5)),
+          Text(q['question'] ?? '',
+              style: TextStyle(
+                  fontFamily: 'Kanit',
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: darkNavy,
+                  height: 1.5)),
           if (q['img'] != null && q['img'] != "") ...[
             const SizedBox(height: 15),
-            ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(q['img'])),
+            ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Image.network(q['img'])),
           ]
         ],
       ),
@@ -239,18 +291,35 @@ class _TestingPageState extends State<TestingPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? primaryGreen : Colors.grey.shade100, width: 2),
-          boxShadow: isSelected ? [BoxShadow(color: primaryGreen.withOpacity(0.1), blurRadius: 10)] : null,
+          border: Border.all(
+              color: isSelected ? primaryGreen : Colors.grey.shade100,
+              width: 2),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                      color: primaryGreen.withOpacity(0.1), blurRadius: 10)
+                ]
+              : null,
         ),
         child: Row(
           children: [
             Container(
-              width: 35, height: 35,
-              decoration: BoxDecoration(color: isSelected ? primaryGreen : bgLight, borderRadius: BorderRadius.circular(10)),
-              child: Center(child: Text(label, style: TextStyle(color: isSelected ? Colors.white : darkNavy, fontWeight: FontWeight.bold))),
+              width: 35,
+              height: 35,
+              decoration: BoxDecoration(
+                  color: isSelected ? primaryGreen : bgLight,
+                  borderRadius: BorderRadius.circular(10)),
+              child: Center(
+                  child: Text(label,
+                      style: TextStyle(
+                          color: isSelected ? Colors.white : darkNavy,
+                          fontWeight: FontWeight.bold))),
             ),
             const SizedBox(width: 15),
-            Expanded(child: Text(text, style: TextStyle(fontFamily: 'Kanit', color: darkNavy, fontSize: 15))),
+            Expanded(
+                child: Text(text,
+                    style: TextStyle(
+                        fontFamily: 'Kanit', color: darkNavy, fontSize: 15))),
           ],
         ),
       ),
@@ -268,15 +337,25 @@ class _TestingPageState extends State<TestingPage> {
             TextButton.icon(
               onPressed: () => setState(() => _currentIndex--),
               icon: const Icon(Icons.arrow_back),
-              label: const Text('ข้อก่อนหน้า', style: TextStyle(fontFamily: 'Kanit')),
+              label: const Text('ข้อก่อนหน้า',
+                  style: TextStyle(fontFamily: 'Kanit')),
               style: TextButton.styleFrom(foregroundColor: Colors.grey),
             )
           else
             const SizedBox(),
           ElevatedButton(
-            onPressed: () => _currentIndex == testings.length - 1 ? _finishExam() : setState(() => _currentIndex++),
-            style: ElevatedButton.styleFrom(backgroundColor: darkNavy, padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-            child: Text(_currentIndex == testings.length - 1 ? 'ส่งข้อสอบ' : 'ข้อถัดไป', style: const TextStyle(fontFamily: 'Kanit', color: Colors.white)),
+            onPressed: () => _currentIndex == testings.length - 1
+                ? _finishExam()
+                : setState(() => _currentIndex++),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: darkNavy,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15))),
+            child: Text(_currentIndex == testings.length - 1 ? 'ส่งข้อสอบ' : 'ข้อถัดไป',
+                style:
+                    const TextStyle(fontFamily: 'Kanit', color: Colors.white)),
           ),
         ],
       ),
@@ -287,9 +366,14 @@ class _TestingPageState extends State<TestingPage> {
     return Scaffold(
       backgroundColor: bgLight,
       appBar: AppBar(
-        title: const Text('เฉลยละเอียด', style: TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white, foregroundColor: darkNavy, elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+        title: const Text('เฉลยละเอียด',
+            style: TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: darkNavy,
+        elevation: 0,
+        leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context)),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(20),
@@ -306,33 +390,52 @@ class _TestingPageState extends State<TestingPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.grey.shade100)),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.grey.shade100)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ข้อที่ ${index + 1}', style: TextStyle(fontFamily: 'Kanit', color: primaryGreen, fontWeight: FontWeight.bold)),
+          Text('ข้อที่ ${index + 1}',
+              style: TextStyle(
+                  fontFamily: 'Kanit',
+                  color: primaryGreen,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          Text(q['question'] ?? '', style: const TextStyle(fontFamily: 'Kanit', fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(q['question'] ?? '',
+              style: const TextStyle(
+                  fontFamily: 'Kanit',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 15),
           ...(q['options'] as List).asMap().entries.map((entry) {
             int optIdx = entry.key + 1;
             bool isCorrect = q['answer'].toString() == optIdx.toString();
             bool isUser = q['answer_user'].toString() == optIdx.toString();
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isCorrect ? Colors.green.shade50 : (isUser ? Colors.red.shade50 : Colors.transparent),
+                color: isCorrect
+                    ? Colors.green.shade50
+                    : (isUser ? Colors.red.shade50 : Colors.transparent),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isCorrect ? Colors.green : (isUser ? Colors.red : Colors.grey.shade100)),
+                border: Border.all(
+                    color: isCorrect
+                        ? Colors.green
+                        : (isUser ? Colors.red : Colors.grey.shade100)),
               ),
               child: Row(
                 children: [
-                  Text(String.fromCharCode(64 + optIdx), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(String.fromCharCode(64 + optIdx),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(width: 10),
                   Expanded(child: Text(entry.value['option_text'])),
-                  if (isCorrect) const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  if (isCorrect)
+                    const Icon(Icons.check_circle,
+                        color: Colors.green, size: 18),
                 ],
               ),
             );
@@ -340,9 +443,43 @@ class _TestingPageState extends State<TestingPage> {
           if (q['ref'] != null && q['ref'] != "")
             Container(
               margin: const EdgeInsets.only(top: 15),
+              width: double.infinity,
               padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: bgLight, borderRadius: BorderRadius.circular(15), border: Border(left: BorderSide(color: primaryGreen, width: 4))),
-              child: Text('คำอธิบาย: ${q['ref']}', style: const TextStyle(fontFamily: 'Kanit', fontSize: 13)),
+              decoration: BoxDecoration(
+                  color: bgLight,
+                  borderRadius: BorderRadius.circular(15),
+                  border:
+                      Border(left: BorderSide(color: primaryGreen, width: 4))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('คำอธิบาย: ${q['ref']}',
+                      style: const TextStyle(fontFamily: 'Kanit', fontSize: 13)),
+                  if (q['detail_url'] != null && q['detail_url'] != "")
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: InkWell(
+                        onTap: () => launchUrl(Uri.parse(q['detail_url'])),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'อ่านรายละเอียดเพิ่มเติม ',
+                              style: TextStyle(
+                                  fontFamily: 'Kanit',
+                                  fontSize: 12,
+                                  color: accentOrange,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline),
+                            ),
+                            Icon(Icons.open_in_new,
+                                size: 14, color: accentOrange),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             )
         ],
       ),

@@ -249,8 +249,8 @@ class _HomePageState extends State<HomePage> {
               context.push('/history');
             }
           }),
-          _buildMenuItem(context, Icons.auto_awesome, 'เสี่ยงเซียมซี', () => context.push('/predict')),
           _buildMenuItem(context, Icons.rocket_launch_outlined, 'เรียนออนไลน์', () => launchUrl(Uri.parse('https://www.youtube.com/@นายโรบอท'))),
+          _buildMenuItem(context, Icons.auto_awesome, 'เว็บไซต์', () => launchUrl(Uri.parse('https://xn--o3cdd5af5d5a4j.com'))),
           _buildMenuItem(context, Icons.coffee_outlined, 'เลี้ยงชาไข่มุก', () => context.push('/pay')),
         ],
       ),

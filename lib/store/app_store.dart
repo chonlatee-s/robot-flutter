@@ -5,7 +5,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 // --- Configuration ---
-const String baseUrl = 'http://localhost/mr_robot_backend'; 
+// const String baseUrl = 'http://localhost/mr_robot_backend';
+const String baseUrl = 'https://xn--o3cdd5af5d5a4j.com'; 
 const Map<String, String> apiHeaders = {
   'X-Api-Key': 'chaichon',
   'Content-Type': 'application/json',
@@ -147,7 +148,7 @@ Future<void> saveExamScore({
       headers: apiHeaders,
       body: jsonEncode({
         'email': currentUser!['email'],
-        'subject': 'วิชาคอมพิวเตอร์',
+        'subject': 'แอปพลิเคชัน',
         'score': score,
         'total': total,
         'duration': duration,
