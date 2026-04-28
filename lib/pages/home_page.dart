@@ -3,391 +3,408 @@ import 'package:go_router/go_router.dart';
 import 'package:robot/store/app_store.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  static const Color primaryGreen = Color(0xFF6A806A);
+  static const Color accentOrange = Color(0xFFB15731);
+  static const Color darkText = Color(0xFF2D2F31);
+
+  @override
+  void initState() {
+    super.initState();
+    // ดึงข้อมูลเริ่มต้นเมื่อเปิดแอป
     getNews();
     getWord();
+    getLeaderboard(); 
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9F8),
       appBar: AppBar(
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/img/logo_home.png',
-              width: 90,
-            ),
-          ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        surfaceTintColor: Colors.white,
+        title: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Image.asset(
+            'assets/img/logo_home.png',
+            width: 90,
+          ),
         ),
+        actions: [
+          ListenableBuilder(
+            listenable: userChanged,
+            builder: (context, child) {
+              if (currentUser == null) return const SizedBox();
+              return Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: GestureDetector(
+                  onTap: () => _showLogoutDialog(context),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundImage: currentUser!['picture'] != null 
+                        ? NetworkImage(currentUser!['picture']) 
+                        : null,
+                    child: currentUser!['picture'] == null 
+                        ? const Icon(Icons.person, size: 20) 
+                        : null,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: ListenableBuilder(
-            listenable: Listenable.merge([newsChanged, wordChanged]),
-            builder: (context, child) {
-              return Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    InkWell(
-                      onTap: () => launchUrl(
-                        Uri.parse((news.isNotEmpty) ? news[0]['ref'] : '?'),
-                      ),
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 20, bottom: 30),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(25),
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topRight,
-                                  end: Alignment.bottomLeft,
-                                  colors: [
-                                    Color.fromRGBO(178, 200, 135, 1),
-                                    Color.fromRGBO(70, 112, 96, 1),
-                                  ],
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Icon(
-                                    size: 30,
-                                    Icons.notifications_active,
-                                    color: Color.fromRGBO(255, 255, 255, 1),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        right: 5, left: 5),
-                                    child: Text(
-                                      (news.isNotEmpty) ? news[0]['news'] : '?',
-                                      style: const TextStyle(
-                                        fontFamily: 'Kanit',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w300,
-                                        color: Color.fromRGBO(255, 255, 255, 1),
-                                      ),
-                                    ),
-                                  ),
-                                  const Icon(
-                                    size: 25,
-                                    Icons.arrow_forward,
-                                    color: Color.fromRGBO(255, 255, 255, 1),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'สวัสดี, คู่หู',
-                              style: TextStyle(
-                                fontFamily: 'Kanit',
-                                fontSize: 30,
-                                fontWeight: FontWeight.w300,
-                                foreground: Paint()
-                                  ..shader = const LinearGradient(
-                                    colors: <Color>[
-                                      Color.fromRGBO(221, 119, 81, 1),
-                                      Color.fromRGBO(218, 49, 139, 1),
-                                    ],
-                                  ).createShader(
-                                    const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0),
-                                  ),
-                              ),
-                            ),
-                            Text(
-                              (word.isNotEmpty) ? word : '?',
-                              style: TextStyle(
-                                fontFamily: 'Kanit',
-                                fontSize: 24,
-                                fontWeight: FontWeight.w300,
-                                foreground: Paint()
-                                  ..shader = const LinearGradient(
-                                    colors: <Color>[
-                                      Color.fromARGB(255, 39, 35, 40),
-                                      Color.fromARGB(255, 96, 83, 94),
-                                    ],
-                                  ).createShader(
-                                    const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0),
-                                  ),
-                              ),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                    const Row(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(top: 45, bottom: 10),
-                          child: Text(
-                            'รายการ',
-                            style: TextStyle(
-                              fontFamily: 'Kanit',
-                              fontSize: 19,
-                              fontWeight: FontWeight.w500,
-                              color: Color.fromRGBO(41, 41, 41, 1),
-                            ),
-                          ),
+          listenable: Listenable.merge([newsChanged, wordChanged, userChanged]),
+          builder: (context, child) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. ประกาศข่าวสาร
+                      if (news.isNotEmpty) _buildCleanNewsBanner(context, news[0]),
+
+                      const SizedBox(height: 24),
+
+                      // 2. ส่วนทักทาย
+                      _buildGreetingSection(),
+                      
+                      const SizedBox(height: 30),
+
+                      // 3. กล่องทำข้อสอบ Hero Card
+                      _buildHeroExamCard(context),
+
+                      const SizedBox(height: 35),
+
+                      const Text(
+                        'บริการทั้งหมด',
+                        style: TextStyle(
+                          fontFamily: 'Kanit',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: darkText,
                         ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(255, 255, 255, 1),
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: const Color.fromARGB(255, 222, 222, 222),
-                        ),
-                        boxShadow: const <BoxShadow>[
-                          BoxShadow(
-                              color: Color.fromRGBO(94, 93, 93, 0.2),
-                              blurRadius: 5.0,
-                              offset: Offset(0.0, 0.20))
-                        ],
                       ),
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                InkWell(
-                                  onTap: () {
-                                    context.push('/testing');
-                                  },
-                                  child: const Column(
-                                    children: [
-                                      Icon(
-                                        Icons.edit_note,
-                                        color: Color.fromRGBO(131, 150, 133, 1),
-                                        size: 35,
-                                      ),
-                                      Text(
-                                        'ฝึกทำข้อสอบ',
-                                        style: TextStyle(
-                                          fontFamily: 'Kanit',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w300,
-                                          color: Color.fromRGBO(41, 41, 41, 1),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                InkWell(
-                                  onTap: () {
-                                    context.push('/predict');
-                                  },
-                                  child: const Column(
-                                    children: [
-                                      Icon(
-                                        Icons.favorite,
-                                        color: Color.fromRGBO(131, 150, 133, 1),
-                                        size: 35,
-                                      ),
-                                      Text(
-                                        'เสี่ยงเซียมซี',
-                                        style: TextStyle(
-                                          fontFamily: 'Kanit',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w300,
-                                          color: Color.fromRGBO(41, 41, 41, 1),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                InkWell(
-                                  onTap: () {
-                                    context.push('/agenda');
-                                  },
-                                  child: const Column(
-                                    children: [
-                                      Icon(
-                                        Icons.category,
-                                        color: Color.fromRGBO(131, 150, 133, 1),
-                                        size: 35,
-                                      ),
-                                      Text(
-                                        'เกณฑ์สอบ',
-                                        style: TextStyle(
-                                          fontFamily: 'Kanit',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w300,
-                                          color: Color.fromRGBO(41, 41, 41, 1),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                InkWell(
-                                  onTap: () {
-                                    context.push('/guideline');
-                                  },
-                                  child: const Column(
-                                    children: [
-                                      Icon(
-                                        Icons.article,
-                                        color: Color.fromRGBO(131, 150, 133, 1),
-                                        size: 35,
-                                      ),
-                                      Text(
-                                        'แนวข้อสอบ',
-                                        style: TextStyle(
-                                          fontFamily: 'Kanit',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w300,
-                                          color: Color.fromRGBO(41, 41, 41, 1),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              InkWell(
-                                onTap: () {
-                                  context.push('/job');
-                                },
-                                child: const Padding(
-                                  padding: EdgeInsets.only(top: 1),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.content_paste_search,
-                                        color: Color.fromRGBO(131, 150, 133, 1),
-                                        size: 35,
-                                      ),
-                                      Text(
-                                        'หางาน',
-                                        style: TextStyle(
-                                          fontFamily: 'Kanit',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w300,
-                                          color: Color.fromRGBO(41, 41, 41, 1),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () => launchUrl(
-                                  Uri.parse(
-                                      'https://www.youtube.com/@user-um9cq5or4v/playlists'),
-                                ),
-                                child: const Column(
-                                  children: [
-                                    Icon(
-                                      Icons.rocket_launch,
-                                      color: Color.fromRGBO(131, 150, 133, 1),
-                                      size: 35,
-                                    ),
-                                    Text(
-                                      'เรียนออนไลน์',
-                                      style: TextStyle(
-                                        fontFamily: 'Kanit',
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w300,
-                                        color: Color.fromRGBO(41, 41, 41, 1),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  context.push('/pay');
-                                },
-                                child: const Padding(
-                                  padding: EdgeInsets.only(top: 1),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.coffee,
-                                        color: Color.fromRGBO(131, 150, 133, 1),
-                                        size: 35,
-                                      ),
-                                      Text(
-                                        'เลี้ยงชาไข่มุก',
-                                        style: TextStyle(
-                                          fontFamily: 'Kanit',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w300,
-                                          color: Color.fromRGBO(41, 41, 41, 1),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
+                      const SizedBox(height: 16),
+
+                      // 4. ตารางเมนู (Action Grid)
+                      _buildMenuGrid(context),
+                      
+                      const SizedBox(height: 35),
+
+                      // 5. ทำเนียบคนเก่ง (Leaderboard)
+                      _buildLeaderboardSection(),
+
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
-              );
-            }),
+              ],
+            );
+          },
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/testing');
-        },
-        tooltip: 'ทำข้อสอบ',
+        onPressed: () => context.push('/exam-mode'),
+        backgroundColor: primaryGreen,
+        elevation: 4,
+        shape: const CircleBorder(),
         child: const Icon(
           Icons.edit_note,
-          size: 40,
-          color: Color.fromRGBO(48, 71, 51, 1),
+          size: 32,
+          color: Colors.white,
         ),
       ),
-      bottomNavigationBar: SizedBox(
-        height: 80,
-        child: BottomNavigationBar(
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(
-                Icons.home,
-                size: 30,
-              ),
-              label: 'หน้าหลัก',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                Icons.person,
-                size: 30,
-              ),
-              label: 'เกี่ยวกับเรา',
-            ),
-          ],
-          onTap: (int index) {
-            if (index == 1) context.go('/aboutUs');
-          },
-          selectedItemColor: const Color.fromRGBO(70, 112, 96, 1),
-          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      bottomNavigationBar: _buildBottomAppBar(context),
+    );
+  }
+
+  Widget _buildGreetingSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          currentUser != null ? 'ยินดีต้อนรับ, คุณ${currentUser!['name']}' : 'สวัสดี, คู่หู',
+          style: const TextStyle(fontFamily: 'Kanit', fontSize: 16, color: Colors.grey),
         ),
+        const SizedBox(height: 4),
+        Text(
+          word.isNotEmpty ? word : 'ขอให้วันนี้เป็นวันที่ดีในการเรียนรู้นะ',
+          style: const TextStyle(
+            fontFamily: 'Kanit',
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: accentOrange,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeroExamCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: accentOrange.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Material(
+          color: Colors.transparent,
+          child: Ink(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFE97451), Color(0xFFB15731)],
+              ),
+            ),
+            child: InkWell(
+              onTap: () => context.push('/exam-mode'),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: 20,
+                    bottom: 35,
+                    child: Icon(Icons.psychology, size: 100, color: Colors.white.withOpacity(0.15)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 30.0, right: 20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'เริ่มทำข้อสอบ',
+                          style: TextStyle(fontFamily: 'Kanit', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ตะลุยโจทย์เพื่อความแม่นยำ',
+                          style: TextStyle(fontFamily: 'Kanit', fontSize: 14, color: Colors.white.withOpacity(0.9)),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(100)),
+                          child: const Text(
+                            'เริ่มเลย',
+                            style: TextStyle(fontFamily: 'Kanit', fontSize: 12, fontWeight: FontWeight.bold, color: accentOrange),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuGrid(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10))],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildMenuItem(context, Icons.history, 'ประวัติการสอบ', () {
+            if (currentUser == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('กรุณาเข้าสู่ระบบเพื่อดูประวัติ', style: TextStyle(fontFamily: 'Kanit'))),
+              );
+              context.push('/exam-mode');
+            } else {
+              context.push('/history');
+            }
+          }),
+          _buildMenuItem(context, Icons.auto_awesome, 'เสี่ยงเซียมซี', () => context.push('/predict')),
+          _buildMenuItem(context, Icons.rocket_launch_outlined, 'เรียนออนไลน์', () => launchUrl(Uri.parse('https://www.youtube.com/@นายโรบอท'))),
+          _buildMenuItem(context, Icons.coffee_outlined, 'เลี้ยงชาไข่มุก', () => context.push('/pay')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: primaryGreen.withOpacity(0.08), borderRadius: BorderRadius.circular(50)),
+            child: Icon(icon, color: primaryGreen, size: 30),
+          ),
+          const SizedBox(height: 10),
+          Text(label, style: const TextStyle(fontFamily: 'Kanit', fontSize: 11, color: darkText)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeaderboardSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'ทำเนียบคนเก่ง',
+          style: TextStyle(fontFamily: 'Kanit', fontSize: 18, fontWeight: FontWeight.bold, color: darkText),
+        ),
+        const SizedBox(height: 16),
+        ValueListenableBuilder(
+          valueListenable: leaderboardChanged,
+          builder: (context, value, child) {
+            if (leaderboardList.isEmpty) {
+              return const Center(child: Text('กำลังโหลดข้อมูล...', style: TextStyle(fontFamily: 'Kanit', fontSize: 12)));
+            }
+            return Column(
+              children: leaderboardList.asMap().entries.map((entry) {
+                int index = entry.key;
+                var user = entry.value;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+                  ),
+                  child: Row(
+                    children: [
+                      Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: primaryGreen)),
+                      const SizedBox(width: 12),
+                      CircleAvatar(radius: 20, backgroundImage: NetworkImage(user['google_profile_pic'])),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          user['user_name'],
+                          style: const TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('${user['top_score']} แต้ม', style: const TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold, color: accentOrange)),
+                          Text(
+                            'เวลา: ${formatDuration(user['best_time'])}',
+                            style: const TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'Kanit'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCleanNewsBanner(BuildContext context, dynamic currentNews) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(15)),
+      child: InkWell(
+        onTap: () => launchUrl(Uri.parse(currentNews['ref'] ?? '')),
+        child: Row(
+          children: [
+            const Icon(Icons.campaign_outlined, color: Colors.green, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '${currentNews['news'] ?? ''}',
+                style: const TextStyle(fontFamily: 'Kanit', fontSize: 13, color: Colors.green),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.green, size: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomAppBar(BuildContext context) {
+    return BottomAppBar(
+      height: 70,
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8,
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.home, color: primaryGreen, size: 26),
+              Text('หน้าหลัก', style: TextStyle(fontFamily: 'Kanit', fontSize: 10, color: primaryGreen, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(width: 40),
+          InkWell(
+            onTap: () => context.go('/aboutUs'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.person, color: Colors.grey[400], size: 26),
+                Text('ผู้พัฒนา', style: TextStyle(fontFamily: 'Kanit', fontSize: 10, color: Colors.grey[400])),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ออกจากระบบ?', style: TextStyle(fontFamily: 'Kanit')),
+        content: const Text('คุณต้องการออกจากระบบใช่หรือไม่?', style: TextStyle(fontFamily: 'Kanit')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
+          TextButton(onPressed: () { logout(); Navigator.pop(context); }, child: const Text('ตกลง', style: TextStyle(color: Colors.red))),
+        ],
       ),
     );
   }

@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:robot/store/app_store.dart';
-import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:robot/store/app_store.dart';
 
 class TestingPage extends StatefulWidget {
   const TestingPage({super.key});
@@ -11,811 +13,339 @@ class TestingPage extends StatefulWidget {
 }
 
 class _TestingPageState extends State<TestingPage> {
-  var _indexStack = 0;
-  final _indexStackChanged = ChangeNotifier();
-  var _index = 0;
-  bool isVisibleNext = true;
-  bool isVisiblePrev = false;
-  final indexChanged = ChangeNotifier();
-  bool isVisibleSentAnswer = false;
-  var _progress = 0.0;
-  var timeCount = '10.00 น.';
-  late Timer _timer;
-  final timeCountChanged = ChangeNotifier();
-  var _score = 0;
-  final scoreChanged = ChangeNotifier();
+  int _currentIndex = 0;
+  bool _isLoading = true;
+  bool _isFinished = false;
+  Timer? _timer;
+  int _remainingSeconds = 0;
+  int _secondsSpent = 0;
 
-  @override
-  void setState(fn) {
-    if (mounted) {
-      super.setState(fn);
-    }
-  }
+  // สีตามธีมนายโรบอท
+  final Color primaryGreen = const Color(0xFF6A806A);
+  final Color accentOrange = const Color(0xFFB15731);
+  final Color darkNavy = const Color(0xFF2D2F31);
+  final Color bgLight = const Color(0xFFF8F9F8);
 
   @override
   void initState() {
     super.initState();
-    getTesting();
-    getTime();
+    // กำหนดเวลา: โหมดแข่งขัน (Login แล้ว) 20 นาที / ฝึกฝน 10 นาที
+    _remainingSeconds = (currentUser != null) ? 20 * 60 : 10 * 60;
+    _startTimer();
+    _initData();
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds > 0) {
+        setState(() {
+          _remainingSeconds--;
+          _secondsSpent++;
+        });
+      } else {
+        _timer?.cancel();
+        _finishExam();
+      }
+    });
+  }
+
+  void _initData() {
+    // ถ้ามีข้อมูลอยู่แล้วให้เลิกโหลด ถ้าไม่มีให้รอฟังจาก Listeners
+    if (testings.isNotEmpty) {
+      setState(() => _isLoading = false);
+    } else {
+      testingsChanged.addListener(_onDataLoaded);
+    }
+  }
+
+  void _onDataLoaded() {
+    if (mounted && testings.isNotEmpty) {
+      setState(() => _isLoading = false);
+      testingsChanged.removeListener(_onDataLoaded);
+    }
+  }
+
+  void _finishExam() {
+    _timer?.cancel();
+    int score = 0;
+    for (var item in testings) {
+      if (item['answer_user'].toString() == item['answer'].toString()) {
+        score++;
+      }
+    }
+
+    // บันทึกคะแนนเฉพาะโหมดแข่งขัน
+    if (currentUser != null) {
+      saveExamScore(
+        score: score,
+        total: testings.length,
+        duration: _secondsSpent,
+      );
+    }
+
+    setState(() => _isFinished = true);
+    _showResultDialog(score, testings.length);
+  }
+
+  void _showResultDialog(int score, int limit) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        title: const Text('สรุปผลการสอบ', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$score / $limit', style: TextStyle(fontFamily: 'Kanit', fontSize: 48, fontWeight: FontWeight.bold, color: primaryGreen)),
+            const Text('คะแนนที่ทำได้', style: TextStyle(fontFamily: 'Kanit', color: Colors.grey)),
+          ],
+        ),
+        actions: [
+          Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(backgroundColor: darkNavy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+              child: const Text('ดูเฉลยละเอียด', style: TextStyle(color: Colors.white, fontFamily: 'Kanit')),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: primaryGreen,
+        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+    if (_isFinished) return _buildReviewView();
+
+    final q = testings[_currentIndex];
+    double progress = (_currentIndex + 1) / testings.length;
+
     return Scaffold(
+      backgroundColor: bgLight,
       appBar: AppBar(
-        title: const Text(
-          'ทำข้อสอบ',
-          style: TextStyle(
-            fontFamily: 'Kanit',
-            fontSize: 24,
-            fontWeight: FontWeight.w400,
-            color: Color.fromRGBO(124, 159, 127, 1),
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: ListenableBuilder(
-            listenable: Listenable.merge([
-              testingsChanged,
-              indexChanged,
-              timeCountChanged,
-              _indexStackChanged
-            ]),
-            builder: (BuildContext context, Widget? child) {
-              return IndexedStack(
-                index: _indexStack,
-                children: [
-                  // ทำข้อสอบ
-                  Container(
-                    width: double.infinity,
-                    color: const Color.fromARGB(255, 249, 246, 242),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          top: 40, left: 15, right: 15, bottom: 15),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          //command
-                          const Padding(
-                            padding: EdgeInsets.only(
-                              left: 10,
-                              right: 10,
-                            ),
-                            child: Text.rich(
-                              TextSpan(
-                                  style: TextStyle(
-                                    fontFamily: 'Kanit',
-                                    fontSize: 14,
-                                    color: Color.fromRGBO(103, 127, 86, 1),
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'คำชี้แจง',
-                                      style: TextStyle(
-                                        decoration: TextDecoration.underline,
-                                        fontWeight: FontWeight.w400,
-                                        decorationColor:
-                                            Color.fromRGBO(103, 127, 86, 1),
-                                        decorationThickness: 1,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text:
-                                          ' : เลือกคำตอบที่ถูกต้องที่สุดเพียงข้อเดียว',
-                                    )
-                                  ]),
-                            ),
-                          ),
-                          const Divider(
-                            color: Color.fromARGB(255, 123, 123, 123),
-                            height: 20,
-                            thickness: 0.1,
-                            indent: 10,
-                            endIndent: 10,
-                          ),
-
-                          // time
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10, left: 10),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'ข้อ ${_index + 1} / ${testings.length}',
-                                  style: const TextStyle(
-                                    fontFamily: 'Kanit',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color.fromRGBO(103, 127, 86, 1),
-                                  ),
-                                ),
-                                Text(
-                                  timeCount,
-                                  style: const TextStyle(
-                                    fontFamily: 'Kanit',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color.fromRGBO(103, 127, 86, 1),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // progress
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10, bottom: 20),
-                            child: Row(
-                              children: [
-                                LinearPercentIndicator(
-                                  width: MediaQuery.of(context).size.width - 30,
-                                  lineHeight: 8.0,
-                                  percent: _progress,
-                                  backgroundColor:
-                                      const Color.fromARGB(255, 199, 199, 199),
-                                  progressColor:
-                                      const Color.fromRGBO(178, 200, 135, 1),
-                                )
-                              ],
-                            ),
-                          ),
-
-                          // question and choice
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.only(
-                                left: 15, top: 15, bottom: 15, right: 15),
-                            decoration: BoxDecoration(
-                              color: const Color.fromRGBO(255, 255, 255, 1),
-                              borderRadius: BorderRadius.circular(9),
-                              border: Border.all(
-                                color: const Color.fromARGB(255, 222, 222, 222),
-                              ),
-                              boxShadow: const <BoxShadow>[
-                                BoxShadow(
-                                    color: Color.fromRGBO(94, 93, 93, 0.2),
-                                    blurRadius: 5.0,
-                                    offset: Offset(0.0, 0.20))
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                //question
-                                Visibility(
-                                  visible: testings.isNotEmpty
-                                      ? testings[_index]['img'] == ''
-                                          ? false
-                                          : true
-                                      : false,
-                                  child: InkWell(
-                                    onTap: () {
-                                      showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        builder: (context) => Container(
-                                          height: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.75,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.only(
-                                              topLeft: Radius.circular(25.0),
-                                              topRight: Radius.circular(25.0),
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: Center(
-                                              child: Image.network(
-                                                  testings[_index]['img'],
-                                                  fit: BoxFit.fill),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: const Padding(
-                                      padding: EdgeInsets.only(bottom: 15),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.image,
-                                            color:
-                                                Color.fromRGBO(124, 38, 27, 1),
-                                          ),
-                                          Text(
-                                            ' คลิกที่นี่เพื่อดูรป',
-                                            style: TextStyle(
-                                              fontFamily: 'Kanit',
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w300,
-                                              color: Color.fromRGBO(
-                                                  124, 38, 27, 1),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  testings.isEmpty
-                                      ? '?'
-                                      : testings[_index]['question'],
-                                  style: const TextStyle(
-                                    fontFamily: 'Kanit',
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color.fromRGBO(41, 41, 41, 1),
-                                  ),
-                                ),
-
-                                const SizedBox(
-                                  height: 20,
-                                ),
-
-                                //choice 1
-                                InkWell(
-                                  onTap: () {
-                                    getAnswer('1');
-                                  },
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.only(
-                                        left: 10,
-                                        top: 10,
-                                        bottom: 10,
-                                        right: 5),
-                                    decoration: BoxDecoration(
-                                      color: (testings.isNotEmpty &&
-                                              testings[_index]['answer_user'] ==
-                                                  '1')
-                                          ? const Color.fromRGBO(
-                                              239, 140, 122, 1)
-                                          : const Color.fromARGB(
-                                              255, 250, 248, 248),
-                                      borderRadius: BorderRadius.circular(9),
-                                      border: Border.all(
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '1')
-                                            ? const Color.fromRGBO(
-                                                239, 140, 122, 1)
-                                            : const Color.fromARGB(
-                                                255, 222, 222, 222),
-                                      ),
-                                      boxShadow: const <BoxShadow>[
-                                        BoxShadow(
-                                            color: Color.fromRGBO(
-                                                216, 216, 216, 0.2),
-                                            blurRadius: 5.0,
-                                            offset: Offset(0.0, 0.20))
-                                      ],
-                                    ),
-                                    child: Text(
-                                      testings.isEmpty
-                                          ? '?'
-                                          : 'ก. ${testings[_index]['ch1']}',
-                                      style: TextStyle(
-                                        fontFamily: 'Kanit',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w300,
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '1')
-                                            ? const Color.fromRGBO(
-                                                255, 255, 255, 1)
-                                            : const Color.fromRGBO(
-                                                41, 41, 41, 1),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(
-                                  height: 10,
-                                ),
-
-                                //choice 2
-                                InkWell(
-                                  onTap: () {
-                                    getAnswer('2');
-                                  },
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.only(
-                                        left: 10,
-                                        top: 10,
-                                        bottom: 10,
-                                        right: 5),
-                                    decoration: BoxDecoration(
-                                      color: (testings.isNotEmpty &&
-                                              testings[_index]['answer_user'] ==
-                                                  '2')
-                                          ? const Color.fromRGBO(
-                                              239, 140, 122, 1)
-                                          : const Color.fromARGB(
-                                              255, 250, 248, 248),
-                                      borderRadius: BorderRadius.circular(9),
-                                      border: Border.all(
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '2')
-                                            ? const Color.fromRGBO(
-                                                239, 140, 122, 1)
-                                            : const Color.fromARGB(
-                                                255, 222, 222, 222),
-                                      ),
-                                      boxShadow: const <BoxShadow>[
-                                        BoxShadow(
-                                            color: Color.fromRGBO(
-                                                216, 216, 216, 0.2),
-                                            blurRadius: 5.0,
-                                            offset: Offset(0.0, 0.20))
-                                      ],
-                                    ),
-                                    child: Text(
-                                      testings.isEmpty
-                                          ? '?'
-                                          : 'ข. ${testings[_index]['ch2']}',
-                                      style: TextStyle(
-                                        fontFamily: 'Kanit',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w300,
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '2')
-                                            ? const Color.fromRGBO(
-                                                255, 255, 255, 1)
-                                            : const Color.fromRGBO(
-                                                41, 41, 41, 1),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 10,
-                                ),
-
-                                //choice 3
-                                InkWell(
-                                  onTap: () {
-                                    getAnswer('3');
-                                  },
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.only(
-                                        left: 10,
-                                        top: 10,
-                                        bottom: 10,
-                                        right: 5),
-                                    decoration: BoxDecoration(
-                                      color: (testings.isNotEmpty &&
-                                              testings[_index]['answer_user'] ==
-                                                  '3')
-                                          ? const Color.fromRGBO(
-                                              239, 140, 122, 1)
-                                          : const Color.fromARGB(
-                                              255, 250, 248, 248),
-                                      borderRadius: BorderRadius.circular(9),
-                                      border: Border.all(
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '3')
-                                            ? const Color.fromRGBO(
-                                                239, 140, 122, 1)
-                                            : const Color.fromARGB(
-                                                255, 222, 222, 222),
-                                      ),
-                                      boxShadow: const <BoxShadow>[
-                                        BoxShadow(
-                                            color: Color.fromRGBO(
-                                                216, 216, 216, 0.2),
-                                            blurRadius: 5.0,
-                                            offset: Offset(0.0, 0.20))
-                                      ],
-                                    ),
-                                    child: Text(
-                                      testings.isEmpty
-                                          ? '?'
-                                          : 'ค. ${testings[_index]['ch3']}',
-                                      style: TextStyle(
-                                        fontFamily: 'Kanit',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w300,
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '3')
-                                            ? const Color.fromRGBO(
-                                                255, 255, 255, 1)
-                                            : const Color.fromRGBO(
-                                                41, 41, 41, 1),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(
-                                  height: 10,
-                                ),
-
-                                //choice 4
-                                InkWell(
-                                  onTap: () {
-                                    getAnswer('4');
-                                  },
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.only(
-                                        left: 10,
-                                        top: 10,
-                                        bottom: 10,
-                                        right: 5),
-                                    decoration: BoxDecoration(
-                                      color: (testings.isNotEmpty &&
-                                              testings[_index]['answer_user'] ==
-                                                  '4')
-                                          ? const Color.fromRGBO(
-                                              239, 140, 122, 1)
-                                          : const Color.fromARGB(
-                                              255, 250, 248, 248),
-                                      borderRadius: BorderRadius.circular(9),
-                                      border: Border.all(
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '4')
-                                            ? const Color.fromRGBO(
-                                                239, 140, 122, 1)
-                                            : const Color.fromARGB(
-                                                255, 222, 222, 222),
-                                      ),
-                                      boxShadow: const <BoxShadow>[
-                                        BoxShadow(
-                                            color: Color.fromRGBO(
-                                                216, 216, 216, 0.2),
-                                            blurRadius: 5.0,
-                                            offset: Offset(0.0, 0.20))
-                                      ],
-                                    ),
-                                    child: Text(
-                                      testings.isEmpty
-                                          ? '?'
-                                          : 'ง. ${testings[_index]['ch4']}',
-                                      style: TextStyle(
-                                        fontFamily: 'Kanit',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w300,
-                                        color: (testings.isNotEmpty &&
-                                                testings[_index]
-                                                        ['answer_user'] ==
-                                                    '4')
-                                            ? const Color.fromRGBO(
-                                                255, 255, 255, 1)
-                                            : const Color.fromRGBO(
-                                                41, 41, 41, 1),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(
-                                  height: 40,
-                                ),
-
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Visibility(
-                                        visible: isVisiblePrev,
-                                        child: IconButton(
-                                          onPressed: () {
-                                            prevStep();
-                                          },
-                                          icon: const Icon(Icons.arrow_back),
-                                        ),
-                                      ),
-                                      const Text(
-                                        'กดลูกศรเพื่อข้ามหรือย้อนกลับ',
-                                        style: TextStyle(
-                                          fontFamily: 'Kanit',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w300,
-                                          color: Color.fromRGBO(41, 41, 41, 1),
-                                        ),
-                                      ),
-                                      Visibility(
-                                        visible: isVisibleNext,
-                                        child: IconButton(
-                                          onPressed: () {
-                                            nextStep();
-                                          },
-                                          icon: const Icon(Icons.arrow_forward),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // ปุ่มส่งคำตอบ
-                          Visibility(
-                            visible: isVisibleSentAnswer,
-                            child: InkWell(
-                              onTap: () {
-                                checkAnswer();
-                              },
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.only(top: 20, bottom: 30),
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(9),
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topRight,
-                                      end: Alignment.bottomLeft,
-                                      colors: [
-                                        Color.fromRGBO(178, 200, 135, 1),
-                                        Color.fromRGBO(70, 112, 96, 1),
-                                      ],
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Text(
-                                    'ตรวจคำตอบ',
-                                    style: TextStyle(
-                                      fontFamily: 'Kanit',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w300,
-                                      color: Color.fromRGBO(255, 255, 255, 1),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'เฉลยคำตอบ',
-                          style: TextStyle(
-                            fontFamily: 'Kanit',
-                            fontSize: 19,
-                            fontWeight: FontWeight.w500,
-                            color: Color.fromRGBO(41, 41, 41, 1),
-                          ),
-                          textAlign: TextAlign.left,
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'คะแนนที่ได้',
-                              style: TextStyle(
-                                fontFamily: 'Kanit',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                                color: Color.fromRGBO(218, 84, 67, 1),
-                              ),
-                            ),
-                            Text(
-                              '$_score / 10',
-                              style: const TextStyle(
-                                fontFamily: 'Kanit',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                                color: Color.fromRGBO(218, 84, 67, 1),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(
-                          color: Color.fromARGB(255, 123, 123, 123),
-                          height: 30,
-                          thickness: 0.2,
-                        ),
-                        showAnswer(),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }),
-      ),
-    );
-  }
-
-  void nextStep() {
-    if (_index < testings.length - 1) {
-      _index++;
-      isVisiblePrev = true;
-    }
-    if (_index == testings.length - 1) isVisibleNext = false;
-    indexChanged.notifyListeners();
-  }
-
-  void prevStep() {
-    if (_index > 0) {
-      _index--;
-      isVisibleNext = true;
-    }
-    if (_index == 0) isVisiblePrev = false;
-
-    indexChanged.notifyListeners();
-  }
-
-  void getAnswer(String ans) {
-    // set คำตอบใหม่ทุกครั้ง
-    testings[_index]['answer_user'] = ans;
-    nextStep();
-    checkProgress();
-  }
-
-  void checkProgress() {
-    var check = 0;
-    var progress = 0.0;
-    for (int i = 0; i < testings.length; i++) {
-      if (testings[i]['answer_user'] == '0') {
-        check++;
-      } else {
-        progress += 0.1;
-      }
-    }
-    if (check == 0) isVisibleSentAnswer = true;
-    _progress = progress;
-  }
-
-  void getTime() {
-    const duration = Duration(minutes: 10); // กำหนดระยะเวลา 10 นาที
-    int countdown = duration.inSeconds; // นับถอยหลังในหน่วยวินาที
-
-    // เริ่มตัวนับเวลา
-    _timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
-      if (countdown == 0) {
-        timer.cancel(); // หยุดตัวนับเวลาเมื่อนับถอยหลังเสร็จสิ้น
-        // print('เวลาหมดแล้ว!');
-        timeCount = 'หมดเวลา';
-        timeCountChanged.notifyListeners();
-        checkAnswer();
-      } else {
-        int minutes = countdown ~/ 60; // หานาที
-        int seconds = countdown % 60; // หาวินาทีที่เหลือ
-        // print('$minutes:${seconds.toString().padLeft(2, '0')}');
-        timeCount = '$minutes:${seconds.toString().padLeft(2, '0')} น.';
-        timeCountChanged.notifyListeners();
-        countdown--;
-      }
-    });
-    // print('เริ่มตัวนับเวลา...');
-  }
-
-  void checkAnswer() {
-    var sum = 0;
-    _indexStack = 1;
-    _indexStackChanged.notifyListeners();
-
-    for (int i = 0; i < testings.length; i++) {
-      if (testings[i]['answer_user'] == testings[i]['answer']) {
-        sum++;
-      }
-    }
-    _score = sum;
-    scoreChanged.notifyListeners();
-    _timer.cancel();
-  }
-
-  Widget showAnswer() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ...testings.map(
-          (item) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Visibility(
-                visible: item['img'] == '' ? false : true,
-                child: Image.network(
-                  item['img'],
-                  fit: BoxFit.fill,
-                ),
-              ),
-              Text(
-                'ข้อ ${item['topic'] + 1} ${item['question']}',
-                style: const TextStyle(
-                  fontFamily: 'Kanit',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Color.fromRGBO(41, 41, 41, 1),
-                ),
-              ),
-              const SizedBox(
-                height: 5,
-              ),
-              (item['answer_user'] == '1')
-                  ? styleAnswer(item['topic'], '1', 'ตอบ')
-                  : (item['answer_user'] == '2')
-                      ? styleAnswer(item['topic'], '2', 'ตอบ')
-                      : (item['answer_user'] == '3')
-                          ? styleAnswer(item['topic'], '3', 'ตอบ')
-                          : (item['answer_user'] == '4')
-                              ? styleAnswer(item['topic'], '4', 'ตอบ')
-                              : styleAnswer(item['topic'], '0', 'ตอบ'),
-              const SizedBox(
-                height: 3,
-              ),
-              (item['answer_user'] != item['answer'])
-                  ? styleAnswer(item['topic'], item['answer'], 'เฉลย')
-                  : const Visibility(
-                      visible: false,
-                      child: Text(''),
-                    ),
-              const Divider(
-                color: Color.fromARGB(255, 123, 123, 123),
-                height: 25,
-                thickness: 0.1,
-              ),
-            ],
-          ),
-        ), //just in case you want to build from list of items as you would do in ListView.builder
-      ],
-    );
-  }
-
-  Widget styleAnswer(topic, answer, txt) {
-    return Text.rich(
-      TextSpan(
-          style: const TextStyle(
-            fontFamily: 'Kanit',
-            fontSize: 14,
-            fontWeight: FontWeight.w300,
-            color: Color.fromARGB(255, 98, 98, 98),
-          ),
-          children: [
-            TextSpan(
-              text: txt,
-              style: const TextStyle(
-                decoration: TextDecoration.underline,
-                decorationColor: Color.fromARGB(255, 98, 98, 98),
-                decorationThickness: 1,
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 20), onPressed: () => Navigator.pop(context)),
+        title: Text(currentUser != null ? 'โหมดแข่งขัน' : 'โหมดฝึกฝน', style: const TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold, fontSize: 18)),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 15, top: 10, bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(color: darkNavy, borderRadius: BorderRadius.circular(12)),
+            child: Center(
+              child: Text(
+                '${_remainingSeconds ~/ 60}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Kanit'),
               ),
             ),
-            TextSpan(
-              text: (answer == '0')
-                  ? ' หมดเวลา ไม่ตอบคำถาม'
-                  : ' ${testings[topic]['ch$answer']}',
+          )
+        ],
+        backgroundColor: Colors.white,
+        foregroundColor: darkNavy,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          _buildProgressBar(progress),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  _buildQuestionCard(q),
+                  const SizedBox(height: 20),
+                  ...(q['options'] as List).asMap().entries.map((entry) {
+                    int idx = entry.key + 1;
+                    String label = String.fromCharCode(64 + idx); // A, B, C, D
+                    bool isSelected = q['answer_user'].toString() == idx.toString();
+                    return _buildOption(idx, label, entry.value['option_text'], isSelected);
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
+          _buildBottomNav(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressBar(double progress) {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('ความก้าวหน้า ${_currentIndex + 1}/${testings.length}', style: TextStyle(fontFamily: 'Kanit', fontSize: 12, color: Colors.grey[600])),
+              Text('${(progress * 100).toInt()}%', style: TextStyle(fontFamily: 'Kanit', fontSize: 12, color: primaryGreen, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(value: progress, minHeight: 8, backgroundColor: primaryGreen.withOpacity(0.1), color: primaryGreen),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionCard(dynamic q) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.grey.shade100)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ข้อที่ ${_currentIndex + 1}', style: TextStyle(fontFamily: 'Kanit', color: accentOrange, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Text(q['question'] ?? '', style: TextStyle(fontFamily: 'Kanit', fontSize: 18, fontWeight: FontWeight.bold, color: darkNavy, height: 1.5)),
+          if (q['img'] != null && q['img'] != "") ...[
+            const SizedBox(height: 15),
+            ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(q['img'])),
+          ]
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOption(int idx, String label, String text, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => testings[_currentIndex]['answer_user'] = idx.toString());
+        if (_currentIndex < testings.length - 1) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) setState(() => _currentIndex++);
+          });
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? primaryGreen : Colors.grey.shade100, width: 2),
+          boxShadow: isSelected ? [BoxShadow(color: primaryGreen.withOpacity(0.1), blurRadius: 10)] : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 35, height: 35,
+              decoration: BoxDecoration(color: isSelected ? primaryGreen : bgLight, borderRadius: BorderRadius.circular(10)),
+              child: Center(child: Text(label, style: TextStyle(color: isSelected ? Colors.white : darkNavy, fontWeight: FontWeight.bold))),
+            ),
+            const SizedBox(width: 15),
+            Expanded(child: Text(text, style: TextStyle(fontFamily: 'Kanit', color: darkNavy, fontSize: 15))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+      decoration: const BoxDecoration(color: Colors.white),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (_currentIndex > 0)
+            TextButton.icon(
+              onPressed: () => setState(() => _currentIndex--),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('ข้อก่อนหน้า', style: TextStyle(fontFamily: 'Kanit')),
+              style: TextButton.styleFrom(foregroundColor: Colors.grey),
             )
-          ]),
+          else
+            const SizedBox(),
+          ElevatedButton(
+            onPressed: () => _currentIndex == testings.length - 1 ? _finishExam() : setState(() => _currentIndex++),
+            style: ElevatedButton.styleFrom(backgroundColor: darkNavy, padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+            child: Text(_currentIndex == testings.length - 1 ? 'ส่งข้อสอบ' : 'ข้อถัดไป', style: const TextStyle(fontFamily: 'Kanit', color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewView() {
+    return Scaffold(
+      backgroundColor: bgLight,
+      appBar: AppBar(
+        title: const Text('เฉลยละเอียด', style: TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white, foregroundColor: darkNavy, elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(20),
+        itemCount: testings.length,
+        itemBuilder: (context, index) {
+          final q = testings[index];
+          return _buildReviewItem(index, q);
+        },
+      ),
+    );
+  }
+
+  Widget _buildReviewItem(int index, dynamic q) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.grey.shade100)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ข้อที่ ${index + 1}', style: TextStyle(fontFamily: 'Kanit', color: primaryGreen, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Text(q['question'] ?? '', style: const TextStyle(fontFamily: 'Kanit', fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 15),
+          ...(q['options'] as List).asMap().entries.map((entry) {
+            int optIdx = entry.key + 1;
+            bool isCorrect = q['answer'].toString() == optIdx.toString();
+            bool isUser = q['answer_user'].toString() == optIdx.toString();
+            
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isCorrect ? Colors.green.shade50 : (isUser ? Colors.red.shade50 : Colors.transparent),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isCorrect ? Colors.green : (isUser ? Colors.red : Colors.grey.shade100)),
+              ),
+              child: Row(
+                children: [
+                  Text(String.fromCharCode(64 + optIdx), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(entry.value['option_text'])),
+                  if (isCorrect) const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                ],
+              ),
+            );
+          }).toList(),
+          if (q['ref'] != null && q['ref'] != "")
+            Container(
+              margin: const EdgeInsets.only(top: 15),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(color: bgLight, borderRadius: BorderRadius.circular(15), border: Border(left: BorderSide(color: primaryGreen, width: 4))),
+              child: Text('คำอธิบาย: ${q['ref']}', style: const TextStyle(fontFamily: 'Kanit', fontSize: 13)),
+            )
+        ],
+      ),
     );
   }
 }
