@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 // --- Configuration ---
-// const String baseUrl = 'http://localhost/mr_robot_backend';
-const String baseUrl = 'https://xn--o3cdd5af5d5a4j.com'; 
+const String baseUrl = 'http://localhost/mr_robot_backend';
+// const String baseUrl = 'https://xn--o3cdd5af5d5a4j.com'; 
 const Map<String, String> apiHeaders = {
   'X-Api-Key': 'chaichon',
   'Content-Type': 'application/json',
@@ -207,25 +207,31 @@ Future<void> getLeaderboard() async {
 
 void getWord() async {
   try {
-    final result = await http.get(Uri.parse('$baseUrl/getWordApp.php'), headers: apiHeaders);
-    final json = jsonDecode(result.body);
-    word = json['word'];
-    wordChanged.notifyListeners();
-  } catch (e) {
-    debugPrint('Error getWord: $e');
-  }
+    final response = await http.get(Uri.parse('$baseUrl/api_get_word.php'), headers: apiHeaders);
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
+        word = jsonResponse['data']['word'] ?? '';
+        wordChanged.notifyListeners();
+      }
+    }
+  } catch (e) { debugPrint('Exception getWord: $e'); }
 }
 
 void getNews() async {
   try {
-    final result = await http.get(Uri.parse('$baseUrl/getNews.php'), headers: apiHeaders);
-    final json = jsonDecode(result.body);
-    news.clear();
-    news.add(json);
-    newsChanged.notifyListeners();
-  } catch (e) {
-    debugPrint('Error getNews: $e');
-  }
+    final response = await http.get(Uri.parse('$baseUrl/api_get_announcement.php'), headers: apiHeaders);
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['status'] == 'success') {
+        news.clear(); 
+        if (jsonResponse['data'] != null) {
+          news.add({'news': jsonResponse['data']['message'], 'ref': jsonResponse['data']['link_url']});
+        }
+        newsChanged.notifyListeners();
+      }
+    }
+  } catch (e) { debugPrint('Exception getNews: $e'); }
 }
 
 void getPredict() async {
