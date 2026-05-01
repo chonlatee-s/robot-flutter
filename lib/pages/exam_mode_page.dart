@@ -1,9 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:robot/store/app_store.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart'; // 1. Import โฆษณา
 
-class ExamModePage extends StatelessWidget {
+class ExamModePage extends StatefulWidget {
   const ExamModePage({super.key});
+
+  @override
+  State<ExamModePage> createState() => _ExamModePageState();
+}
+
+class _ExamModePageState extends State<ExamModePage> {
+  // 2. ตัวแปรสำหรับจัดการโฆษณา
+  BannerAd? _bannerAd;
+  bool _isLoaded = false;
+
+  // ID สำหรับทดสอบ (อย่าลืมเปลี่ยนเป็น ID จริงตอนปล่อยแอปนะครับ)
+  final String adUnitId = 'ca-app-pub-5901161227057601/7244214360'; // ของจริง admob
+  // final String adUnitId = 'ca-app-pub-3940256099942544/6300978111'; // ตัวทดสอบ
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAd();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose(); // ทำลายโฆษณาเมื่อออกจากหน้าเพื่อประหยัด RAM
+    super.dispose();
+  }
+
+  // ฟังก์ชันโหลดโฆษณา
+  void _loadAd() {
+    _bannerAd = BannerAd(
+      adUnitId: adUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +64,6 @@ class ExamModePage extends StatelessWidget {
       body: ListenableBuilder(
         listenable: userChanged,
         builder: (context, child) {
-          // --- ลบส่วน Auto-redirect (PostFrameCallback) ออกแล้ว ---
-          // เพื่อให้เมื่อกลับมาหน้านี้อีกครั้ง ผู้ใช้ยังคงเห็นเมนูเลือกโหมดอยู่เสมอ
-
           return Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -32,41 +74,34 @@ class ExamModePage extends StatelessWidget {
                   title: 'โหมดแข่งขัน',
                   subtitle: 'จับเวลาจริง บันทึกคะแนนลงทำเนียบคนเก่ง',
                   icon: Icons.emoji_events_rounded,
-                  color: const Color(0xFFB15731), // accentOrange
-                  isLocked: currentUser == null, // แสดงไอคอนล็อกถ้ายังไม่ Login
+                  color: const Color(0xFFB15731),
+                  isLocked: currentUser == null,
                   onTap: () async {
                     if (currentUser == null) {
-                      // ถ้ายังไม่ Login ให้ไป Login ก่อน
                       await loginWithGoogle(context);
-                      
-                      // หลังจาก Login เสร็จ (ถ้าสำเร็จ) ให้พาเข้าหน้า Testing ทันทีในครั้งแรกนี้
                       if (currentUser != null) {
                         getTesting(mode: 'competition');
                         if (context.mounted) context.pushReplacement('/testing');
                       }
                     } else {
-                      // ถ้า Login อยู่แล้ว แค่ดึงข้อมูลแล้วไปหน้าสอบ
                       getTesting(mode: 'competition');
                       context.push('/testing');
                     }
                   },
                 ),
-
                 const SizedBox(height: 20),
-
                 // การ์ดโหมดฝึกฝน
                 _buildModeCard(
                   context,
                   title: 'โหมดฝึกฝน',
                   subtitle: 'สุ่มข้อสอบทำได้ไม่จำกัด พร้อมเฉลยละเอียด',
                   icon: Icons.menu_book_rounded,
-                  color: const Color(0xFF6A806A), // primaryGreen
+                  color: const Color(0xFF6A806A),
                   onTap: () {
                     getTesting(mode: 'practice');
                     context.push('/testing');
                   },
                 ),
-                
                 if (currentUser != null) ...[
                   const SizedBox(height: 30),
                   Text(
@@ -79,6 +114,20 @@ class ExamModePage extends StatelessWidget {
           );
         },
       ),
+      // 3. วางโฆษณาใน bottomNavigationBar เพื่อให้ชิดขอบล่างสุดพอดี
+      bottomNavigationBar: _isLoaded && _bannerAd != null
+          ? Container(
+              color: Colors.white,
+              padding: const EdgeInsets.only(bottom: 5), // เพิ่มช่องว่างเล็กน้อยถ้าต้องการ
+              child: SafeArea(
+                child: SizedBox(
+                  width: _bannerAd!.size.width.toDouble(),
+                  height: _bannerAd!.size.height.toDouble(),
+                  child: AdWidget(ad: _bannerAd!),
+                ),
+              ),
+            )
+          : const SizedBox.shrink(),
     );
   }
 
@@ -99,9 +148,8 @@ class ExamModePage extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(25),
           border: Border.all(
-            color: isLocked ? Colors.grey.shade300 : color.withOpacity(0.5), 
-            width: 1
-          ),
+              color: isLocked ? Colors.grey.shade300 : color.withOpacity(0.5),
+              width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.02),
@@ -115,11 +163,8 @@ class ExamModePage extends StatelessWidget {
             CircleAvatar(
               radius: 30,
               backgroundColor: isLocked ? Colors.grey.shade200 : color.withOpacity(0.1),
-              child: Icon(
-                isLocked ? Icons.lock_outline : icon, 
-                color: isLocked ? Colors.grey : color, 
-                size: 30
-              ),
+              child: Icon(isLocked ? Icons.lock_outline : icon,
+                  color: isLocked ? Colors.grey : color, size: 30),
             ),
             const SizedBox(width: 20),
             Expanded(
@@ -138,10 +183,9 @@ class ExamModePage extends StatelessWidget {
                   Text(
                     isLocked ? 'กรุณาเข้าสู่ระบบเพื่อปลดล็อก' : subtitle,
                     style: TextStyle(
-                      fontFamily: 'Kanit', 
-                      fontSize: 13, 
-                      color: Colors.grey.shade600
-                    ),
+                        fontFamily: 'Kanit',
+                        fontSize: 13,
+                        color: Colors.grey.shade600),
                   ),
                 ],
               ),

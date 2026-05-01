@@ -12,11 +12,14 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
-    getHistory(); // ดึงข้อมูลทันทีที่เข้าหน้า
+    getHistory();
   }
 
   @override
   Widget build(BuildContext context) {
+    // ดึงค่าระยะห่างจากขอบล่างของจอ (Safe Area Bottom)
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9F8),
       appBar: AppBar(
@@ -30,23 +33,33 @@ class _HistoryPageState extends State<HistoryPage> {
         listenable: historyChanged,
         builder: (context, child) {
           if (historyList.isEmpty) {
-            return const Center(child: Text('ยังไม่มีประวัติการสอบ', style: TextStyle(fontFamily: 'Kanit')));
+            return const Center(
+              child: Text('ยังไม่มีประวัติการสอบ', style: TextStyle(fontFamily: 'Kanit'))
+            );
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            // ปรับตรงนี้: เพิ่ม bottomPadding เข้าไปใน padding ของ ListView
+            padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding + 20), 
             itemCount: historyList.length,
             itemBuilder: (context, index) {
               final item = historyList[index];
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  side: BorderSide(color: Colors.grey.shade200)
+                ),
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFF6A806A).withOpacity(0.1),
                     child: const Icon(Icons.assignment_turned_in, color: Color(0xFF6A806A)),
                   ),
-                  title: Text(item['subject_name'], style: const TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)),
-                  // ในไฟล์ history_page.dart ตรงส่วน subtitle
+                  title: Text(
+                    item['subject_name'] ?? 'ไม่ระบุวิชา', 
+                    style: const TextStyle(fontFamily: 'Kanit', fontWeight: FontWeight.bold)
+                  ),
                   subtitle: Text(
                     'วันที่: ${formatThaiDate(item['created_at'])}', 
                     style: const TextStyle(
@@ -55,7 +68,6 @@ class _HistoryPageState extends State<HistoryPage> {
                       color: Colors.grey,
                     ),
                   ),
-                  // ค้นหาบรรทัดนี้ใน history_page.dart แล้วเปลี่ยนเป็นโค้ดด้านล่างครับ
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -71,7 +83,11 @@ class _HistoryPageState extends State<HistoryPage> {
                       ),
                       Text(
                         formatDuration(item['time_spent']),
-                        style: const TextStyle(fontSize: 10, fontFamily: 'Kanit'),
+                        style: const TextStyle(
+                          fontSize: 10, 
+                          fontFamily: 'Kanit',
+                          color: Colors.blueGrey
+                        ),
                       ),
                     ],
                   ),

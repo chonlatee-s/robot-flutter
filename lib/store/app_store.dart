@@ -5,8 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 // --- Configuration ---
-const String baseUrl = 'http://localhost/mr_robot_backend';
-// const String baseUrl = 'https://xn--o3cdd5af5d5a4j.com'; 
+const String baseUrl = 'https://xn--o3cdd5af5d5a4j.com'; 
 const Map<String, String> apiHeaders = {
   'X-Api-Key': 'chaichon',
   'Content-Type': 'application/json',
@@ -39,11 +38,20 @@ List leaderboardList = [];
 final leaderboardChanged = ValueNotifier<int>(0);
 
 // --- Google Sign In Configuration ---
-const String webClientId = '694529936527-pp9085pkfvaqjl1l9foaiagb624g6vgr.apps.googleusercontent.com';
-const String androidClientId = '694529936527-iajgb2i7n47io5f5kb5mfa69hu2fe9ns.apps.googleusercontent.com';
+// ใช้ค่าจาก client_type: 3 ในไฟล์ google-services.json ของคุณ
+const String serverClientId = '694529936527-c942o6ad6noo1p6gj0hsjk4oboekdlak.apps.googleusercontent.com';
+
+// final GoogleSignIn _googleSignIn = GoogleSignIn(
+//   // การใส่ serverClientId เป็นหัวใจสำคัญในการแก้ Error 10 บน Android
+//   serverClientId: serverClientId,
+//   scopes: <String>['email', 'profile', 'openid'],
+// );
 
 final GoogleSignIn _googleSignIn = GoogleSignIn(
-  clientId: kIsWeb ? webClientId : androidClientId,
+  // ถ้าเป็น Web (kIsWeb == true) ให้ส่งค่าไปที่ clientId และปล่อย serverClientId เป็น null
+  // ถ้าเป็น Android ให้ส่งค่าไปที่ serverClientId เพื่อแก้ Error 10
+  clientId: kIsWeb ? serverClientId : null,
+  serverClientId: kIsWeb ? null : serverClientId,
   scopes: <String>['email', 'profile', 'openid'],
 );
 
@@ -52,15 +60,27 @@ final GoogleSignIn _googleSignIn = GoogleSignIn(
 Future<void> loginWithGoogle(BuildContext context) async {
   try {
     debugPrint('เริ่มกระบวนการ Login...');
+    
+    // บังคับให้ Sign Out ก่อนเพื่อให้หน้าเลือก Account เด้งขึ้นมาเสมอเวลาเทส
+    if (await _googleSignIn.isSignedIn()) {
+      await _googleSignIn.signOut();
+    }
+
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return;
+    if (googleUser == null) {
+      debugPrint('ผู้ใช้ยกเลิกการ Login');
+      return;
+    }
 
     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
     Map<String, dynamic> requestBody;
 
+    // เมื่อใส่ serverClientId ถูกต้อง googleAuth.idToken จะไม่เป็น null
     if (googleAuth.idToken != null) {
+      debugPrint('ได้รับ ID Token สำเร็จ');
       requestBody = {'token': googleAuth.idToken};
     } else {
+      debugPrint('ไม่ได้รับ ID Token ใช้ข้อมูลโปรไฟล์พื้นฐานแทน');
       requestBody = {
         'email': googleUser.email,
         'name': googleUser.displayName,
@@ -87,6 +107,8 @@ Future<void> loginWithGoogle(BuildContext context) async {
             backgroundColor: const Color(0xFF6A806A),
           ),
         );
+      } else {
+        debugPrint('Server Error: ${jsonResponse['message']}');
       }
     }
   } catch (error) {
@@ -161,7 +183,7 @@ Future<void> saveExamScore({
   } catch (e) {
     debugPrint('Error saveExamScore: $e');
   }
-} // ปิดปีกกาให้ถูกต้องแล้ว
+}
 
 // --- 3. ประวัติการสอบ & ทำเนียบคนเก่ง ---
 
@@ -235,7 +257,6 @@ void getNews() async {
 }
 
 void getPredict() async {
-  // เพิ่มฟังก์ชันเสี่ยงทายไว้ให้ตามตัวแปรด้านบนครับ
   try {
     final result = await http.get(Uri.parse('$baseUrl/api_get_fortune.php'), headers: apiHeaders);
     final json = jsonDecode(result.body);
@@ -250,7 +271,8 @@ void getPredict() async {
   }
 }
 
-// วางไว้ใน app_store.dart
+// --- Helper Functions ---
+
 String formatDuration(dynamic secondsInput) {
   int totalSeconds = int.tryParse(secondsInput.toString()) ?? 0;
   if (totalSeconds == 0) return '0 วินาที';
@@ -262,15 +284,11 @@ String formatDuration(dynamic secondsInput) {
   return '$minutes นาที $seconds วินาที';
 }
 
-
-// วางไว้ใน app_store.dart
 String formatThaiDate(String dateString) {
   if (dateString.isEmpty) return "";
   
   try {
     DateTime date = DateTime.parse(dateString);
-    
-    // รายชื่อเดือนไทย
     const List<String> monthNames = [
       "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
       "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
@@ -278,13 +296,11 @@ String formatThaiDate(String dateString) {
 
     int day = date.day;
     String month = monthNames[date.month - 1];
-    int year = date.year + 543; // แปลง ค.ศ. เป็น พ.ศ.
-    
-    // ดึงเวลามาด้วยถ้าต้องการ (HH:mm น.)
+    int year = date.year + 543;
     String time = "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
 
     return "$day $month $year • $time น.";
   } catch (e) {
-    return dateString; // ถ้าแปลงไม่ได้ ให้ส่งค่าเดิมกลับไป
+    return dateString;
   }
 }

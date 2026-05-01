@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:robot/routes.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-void main() {
+void main() async {
+  // 1. ต้องมีบรรทัดนี้เสมอ
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 2. วิธีแก้: เรียก initialize โดยไม่ต้อง await 
+  // หรือใช้ .then เพื่อให้แอปทำงานต่อไปได้ทันที (Non-blocking)
+  MobileAds.instance.initialize().then((status) {
+    debugPrint('AdMob Initialized: ${status.adapterStatuses}');
+  });
+
   runApp(const MyApp());
 }
 

@@ -140,7 +140,7 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          currentUser != null ? 'ยินดีต้อนรับ, คุณ${currentUser!['name']}' : 'สวัสดี, คู่หู',
+          currentUser != null ? 'สวัสดี, ${currentUser!['name']}' : 'สวัสดี, คู่หู',
           style: const TextStyle(fontFamily: 'Kanit', fontSize: 16, color: Colors.grey),
         ),
         const SizedBox(height: 4),
@@ -148,9 +148,9 @@ class _HomePageState extends State<HomePage> {
           word.isNotEmpty ? word : 'ขอให้วันนี้เป็นวันที่ดีในการเรียนรู้นะ',
           style: const TextStyle(
             fontFamily: 'Kanit',
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: accentOrange,
+            fontSize: 21,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFFF08A68)
           ),
         ),
       ],
@@ -178,10 +178,14 @@ class _HomePageState extends State<HomePage> {
           child: Ink(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFE97451), Color(0xFFB15731)],
-              ),
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFFF08A68),
+        Color(0xFFE97451),
+        Color(0xFFB15731),
+      ],
+    ),
             ),
             child: InkWell(
               onTap: () => context.push('/exam-mode'),

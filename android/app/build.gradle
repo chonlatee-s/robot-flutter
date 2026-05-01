@@ -2,6 +2,8 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
+    // 1. เพิ่มบรรทัดนี้ลงไป
+    id 'com.google.gms.google-services'
 }
 
 def localProperties = new Properties()
@@ -79,4 +81,8 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    // 2. เพิ่มส่วนของ Firebase ลงไปในนี้
+    implementation platform('com.google.firebase:firebase-bom:34.12.0')
+    implementation 'com.google.firebase:firebase-analytics'
+}

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:robot/store/app_store.dart';
+import '../services/ad_helper.dart';
 
 class TestingPage extends StatefulWidget {
   const TestingPage({super.key});
@@ -29,6 +30,7 @@ class _TestingPageState extends State<TestingPage> {
   @override
   void initState() {
     super.initState();
+    AdHelper.loadInterstitialAd();
     // กำหนดเวลา: โหมดแข่งขัน (Login แล้ว) 20 นาที / ฝึกฝน 10 นาที
     _remainingSeconds = (currentUser != null) ? 20 * 60 : 10 * 60;
     _startTimer();
@@ -117,7 +119,13 @@ class _TestingPageState extends State<TestingPage> {
         actions: [
           Center(
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                // 1. สั่งแสดงโฆษณาก่อน
+                AdHelper.showInterstitialAd(() {
+                  // 2. เมื่อปิดโฆษณา หรือโฆษณาโหลดไม่ขึ้น ให้ทำคำสั่งข้างล่างนี้
+                  Navigator.pop(context); // ปิด Dialog สรุปผล
+                });
+              },
               style: ElevatedButton.styleFrom(
                   backgroundColor: darkNavy,
                   shape: RoundedRectangleBorder(
@@ -326,38 +334,41 @@ class _TestingPageState extends State<TestingPage> {
     );
   }
 
-  Widget _buildBottomNav() {
+ Widget _buildBottomNav() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-      decoration: const BoxDecoration(color: Colors.white),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          if (_currentIndex > 0)
-            TextButton.icon(
-              onPressed: () => setState(() => _currentIndex--),
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('ข้อก่อนหน้า',
-                  style: TextStyle(fontFamily: 'Kanit')),
-              style: TextButton.styleFrom(foregroundColor: Colors.grey),
-            )
-          else
-            const SizedBox(),
-          ElevatedButton(
-            onPressed: () => _currentIndex == testings.length - 1
-                ? _finishExam()
-                : setState(() => _currentIndex++),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: darkNavy,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15))),
-            child: Text(_currentIndex == testings.length - 1 ? 'ส่งข้อสอบ' : 'ข้อถัดไป',
-                style:
-                    const TextStyle(fontFamily: 'Kanit', color: Colors.white)),
+      // 1. ใส่สีพื้นหลังให้ Container ชั้นนอกสุดเพื่อให้ SafeArea ดูเนียน
+      color: Colors.white, 
+      child: SafeArea(
+        // 2. ใช้ SafeArea ครอบเฉพาะด้านล่าง (bottom: true เป็นค่าเริ่มต้น)
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20), // ปรับ padding ให้สมดุล
+          decoration: const BoxDecoration(color: Colors.white),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (_currentIndex > 0)
+                TextButton.icon(
+                  onPressed: () => setState(() => _currentIndex--),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('ข้อก่อนหน้า', style: TextStyle(fontFamily: 'Kanit')),
+                  style: TextButton.styleFrom(foregroundColor: Colors.grey),
+                )
+              else
+                const SizedBox(),
+              ElevatedButton(
+                onPressed: () => _currentIndex == testings.length - 1 
+                    ? _finishExam() 
+                    : setState(() => _currentIndex++),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: darkNavy,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                child: Text(_currentIndex == testings.length - 1 ? 'ส่งข้อสอบ' : 'ข้อถัดไป',
+                    style: const TextStyle(fontFamily: 'Kanit', color: Colors.white)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -1,1 +1,55 @@
-{"installed":{"client_id":"694529936527-iajgb2i7n47io5f5kb5mfa69hu2fe9ns.apps.googleusercontent.com","project_id":"mrrobot-493707","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs"}}
+{
+  "project_info": {
+    "project_number": "694529936527",
+    "project_id": "mrrobot-493707",
+    "storage_bucket": "mrrobot-493707.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:694529936527:android:2ca66500fb0103dc2534fa",
+        "android_client_info": {
+          "package_name": "com.robotApp.robot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "694529936527-iajgb2i7n47io5f5kb5mfa69hu2fe9ns.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.robotApp.robot",
+            "certificate_hash": "b31aeeb2ad1755fc202fcc5415689a43c44508cb"
+          }
+        },
+        {
+          "client_id": "694529936527-ntr2a0nktj0fbksd8l48g1pl9vl11l63.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.robotApp.robot",
+            "certificate_hash": "a5f4c54031835b9fe9381177f221cd57e5efec5a"
+          }
+        },
+        {
+          "client_id": "694529936527-c942o6ad6noo1p6gj0hsjk4oboekdlak.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1nYqqslSCMoEW_0-VTauci2iD-IaGto4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "694529936527-c942o6ad6noo1p6gj0hsjk4oboekdlak.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
