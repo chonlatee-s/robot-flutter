@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:robot/routes.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:robot/store/app_store.dart'; // 1. ตรวจสอบว่า import ไฟล์ store มาแล้ว
 
 void main() async {
-  // 1. ต้องมีบรรทัดนี้เสมอ
+  // ต้องมีบรรทัดนี้เสมอเพื่อให้เรียกใช้ Plugin ต่างๆ ได้ก่อน runApp
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 2. วิธีแก้: เรียก initialize โดยไม่ต้อง await 
-  // หรือใช้ .then เพื่อให้แอปทำงานต่อไปได้ทันที (Non-blocking)
+  // 2. เรียกใช้ระบบจำการ Login (Auto Login)
+  // ใช้ await เพื่อให้แอปดึงข้อมูล User เก่ามาใส่ currentUser ให้เสร็จก่อนเริ่มหน้าแรก
+  await initUser();
+
+  // 3. เรียก initialize AdMob (แบบ Non-blocking เหมือนเดิม)
   MobileAds.instance.initialize().then((status) {
     debugPrint('AdMob Initialized: ${status.adapterStatuses}');
   });
@@ -18,7 +22,6 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(

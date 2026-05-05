@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb; 
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // เพิ่มตัวจัดการฐานข้อมูลในเครื่อง
 
 // --- Configuration ---
 const String baseUrl = 'https://xn--o3cdd5af5d5a4j.com'; 
@@ -11,7 +12,7 @@ const Map<String, String> apiHeaders = {
   'Content-Type': 'application/json',
 };
 
-// --- State Variables (General) ---
+// --- State Variables ---
 var predictNumber = "";
 final predictNumberChanged = ChangeNotifier();
 var predictResult = "";
@@ -38,49 +39,54 @@ List leaderboardList = [];
 final leaderboardChanged = ValueNotifier<int>(0);
 
 // --- Google Sign In Configuration ---
-// ใช้ค่าจาก client_type: 3 ในไฟล์ google-services.json ของคุณ
 const String serverClientId = '694529936527-c942o6ad6noo1p6gj0hsjk4oboekdlak.apps.googleusercontent.com';
 
-// final GoogleSignIn _googleSignIn = GoogleSignIn(
-//   // การใส่ serverClientId เป็นหัวใจสำคัญในการแก้ Error 10 บน Android
-//   serverClientId: serverClientId,
-//   scopes: <String>['email', 'profile', 'openid'],
-// );
-
 final GoogleSignIn _googleSignIn = GoogleSignIn(
-  // ถ้าเป็น Web (kIsWeb == true) ให้ส่งค่าไปที่ clientId และปล่อย serverClientId เป็น null
-  // ถ้าเป็น Android ให้ส่งค่าไปที่ serverClientId เพื่อแก้ Error 10
   clientId: kIsWeb ? serverClientId : null,
   serverClientId: kIsWeb ? null : serverClientId,
   scopes: <String>['email', 'profile', 'openid'],
 );
 
-// --- 1. ระบบ Login / Logout ---
+// --- 1. ระบบ Login / Logout (แก้ไขใหม่) ---
+
+// ฟังก์ชันสำหรับตรวจสอบสถานะตอนเปิดแอป (Auto Login)
+Future<void> initUser() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final String? userData = prefs.getString('user_data');
+    
+    if (userData != null) {
+      // 1. ถ้ามีข้อมูลในเครื่อง ให้โหลดขึ้นมาทันที
+      currentUser = jsonDecode(userData);
+      userChanged.notifyListeners();
+      debugPrint('Auto Login จาก Memory สำเร็จ: ${currentUser!['name']}');
+    } 
+    
+    // 2. ตรวจสอบสถานะกับ Google เผื่อ Token หมดอายุ
+    final bool alreadySignedIn = await _googleSignIn.isSignedIn();
+    if (alreadySignedIn) {
+      await _googleSignIn.signInSilently();
+      debugPrint('Google Sign-In Silently สำเร็จ');
+    }
+  } catch (e) {
+    debugPrint('Error initUser: $e');
+  }
+}
 
 Future<void> loginWithGoogle(BuildContext context) async {
   try {
     debugPrint('เริ่มกระบวนการ Login...');
     
-    // บังคับให้ Sign Out ก่อนเพื่อให้หน้าเลือก Account เด้งขึ้นมาเสมอเวลาเทส
-    if (await _googleSignIn.isSignedIn()) {
-      await _googleSignIn.signOut();
-    }
-
+    // ไม่ต้อง signOut() ก่อน เพื่อให้ระบบจำ User ได้
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) {
-      debugPrint('ผู้ใช้ยกเลิกการ Login');
-      return;
-    }
+    if (googleUser == null) return;
 
     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
     Map<String, dynamic> requestBody;
 
-    // เมื่อใส่ serverClientId ถูกต้อง googleAuth.idToken จะไม่เป็น null
     if (googleAuth.idToken != null) {
-      debugPrint('ได้รับ ID Token สำเร็จ');
       requestBody = {'token': googleAuth.idToken};
     } else {
-      debugPrint('ไม่ได้รับ ID Token ใช้ข้อมูลโปรไฟล์พื้นฐานแทน');
       requestBody = {
         'email': googleUser.email,
         'name': googleUser.displayName,
@@ -99,16 +105,22 @@ Future<void> loginWithGoogle(BuildContext context) async {
       final jsonResponse = jsonDecode(response.body);
       if (jsonResponse['status'] == 'success') {
         currentUser = jsonResponse['user'];
+        
+        // --- บันทึกข้อมูลลงเครื่อง ---
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_data', jsonEncode(currentUser));
+        // -----------------------
+
         userChanged.notifyListeners();
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('ยินดีต้อนรับคุณ ${currentUser!['name']}', style: const TextStyle(fontFamily: 'Kanit')),
-            backgroundColor: const Color(0xFF6A806A),
-          ),
-        );
-      } else {
-        debugPrint('Server Error: ${jsonResponse['message']}');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('ยินดีต้อนรับคุณ ${currentUser!['name']}', style: const TextStyle(fontFamily: 'Kanit')),
+              backgroundColor: const Color(0xFF6A806A),
+            ),
+          );
+        }
       }
     }
   } catch (error) {
@@ -117,9 +129,20 @@ Future<void> loginWithGoogle(BuildContext context) async {
 }
 
 Future<void> logout() async {
-  await _googleSignIn.signOut();
-  currentUser = null;
-  userChanged.notifyListeners();
+  try {
+    // 1. Sign out จาก Google
+    await _googleSignIn.signOut();
+    
+    // 2. ล้างข้อมูลในเครื่อง
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_data');
+    
+    // 3. รีเซ็ตค่าในแอป
+    currentUser = null;
+    userChanged.notifyListeners();
+  } catch (e) {
+    debugPrint('Logout Error: $e');
+  }
 }
 
 // --- 2. ระบบดึงข้อสอบ & บันทึกคะแนน ---
@@ -165,7 +188,7 @@ Future<void> saveExamScore({
 }) async {
   if (currentUser == null) return;
   try {
-    final response = await http.post(
+    await http.post(
       Uri.parse('$baseUrl/api_save_score.php'),
       headers: apiHeaders,
       body: jsonEncode({
@@ -176,10 +199,6 @@ Future<void> saveExamScore({
         'duration': duration,
       }),
     );
-    final result = jsonDecode(response.body);
-    if (result['status'] == 'success') {
-      debugPrint('บันทึกคะแนนสำเร็จ');
-    }
   } catch (e) {
     debugPrint('Error saveExamScore: $e');
   }
@@ -276,31 +295,21 @@ void getPredict() async {
 String formatDuration(dynamic secondsInput) {
   int totalSeconds = int.tryParse(secondsInput.toString()) ?? 0;
   if (totalSeconds == 0) return '0 วินาที';
-  
   int minutes = totalSeconds ~/ 60;
   int seconds = totalSeconds % 60;
-  
   if (minutes == 0) return '$seconds วินาที';
   return '$minutes นาที $seconds วินาที';
 }
 
 String formatThaiDate(String dateString) {
   if (dateString.isEmpty) return "";
-  
   try {
     DateTime date = DateTime.parse(dateString);
-    const List<String> monthNames = [
-      "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-      "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
-    ];
-
+    const List<String> monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
     int day = date.day;
     String month = monthNames[date.month - 1];
     int year = date.year + 543;
     String time = "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
-
     return "$day $month $year • $time น.";
-  } catch (e) {
-    return dateString;
-  }
+  } catch (e) { return dateString; }
 }
